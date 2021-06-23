@@ -2,10 +2,12 @@
 /* eslint-disable react/jsx-props-no-spreading */
 /* eslint-disable react/prop-types */
 /* eslint-disable no-nested-ternary */
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useTable } from 'react-table';
 import PerfectScrollbar from 'react-perfect-scrollbar';
 import 'react-perfect-scrollbar/dist/css/styles.css';
+import { parse, stringify } from 'query-string';
+import { useHistory, useLocation } from 'react-router-dom';
 import Button from '../Button/Button';
 import ColumnHeader from './ColumnHeader';
 import './ProjectsTable.scss';
@@ -19,8 +21,36 @@ export default function ProjectsTable({ projects, tableAttributes }) {
     rows,
     page,
     setPageSize,
-    state: { pageSize },
+    state: { filters, pageSize },
   } = useTable(...tableAttributes);
+
+  const query = useLocation().search;
+  const history = useHistory();
+
+  const queries = useCallback(
+    () =>
+      parse(query, {
+        arrayFormat: 'comma',
+      }),
+    [query]
+  );
+
+  const setFilters = useCallback(
+    (newFilter) => {
+      const { timeRange, topics, brigades } = queries();
+      const _newFilter = { timeRange, topics, brigades, ...newFilter };
+      history.replace(`?${stringify(_newFilter, { arrayFormat: 'comma' })}`);
+    },
+    [queries, history]
+  );
+
+  React.useEffect(() => {
+    // Todo: include all filters, otherwise they can't be deleted
+    const simple = filters.reduce((acc, next) => {
+      return { ...acc, [next.id]: next.value };
+    }, {});
+    setFilters(simple);
+  }, [filters, setFilters]);
 
   return (
     <div className="projects-table">
